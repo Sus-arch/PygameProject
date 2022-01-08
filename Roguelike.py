@@ -14,7 +14,9 @@ pygame.init()
 pygame.display.set_caption('Какой-то рогалик(типо айзека)')
 screen = pygame.display.set_mode((WIN_WIDTH, WIN_HEIGHT))
 running = True
-
+ROOMCLEAR = True
+NEWROOM = False
+ROOMUPDATE = False
 
 def load_image(name, colorkey=None):
     fullname = os.path.join('data', name)
@@ -71,7 +73,11 @@ def start_screen():
         clock.tick(FPS)
 
 
-class Player:
+def game_over_screen():
+    pass
+
+
+class Player():
     def __init__(self):
         self.hp = 20
         self.speed = 5
@@ -80,8 +86,10 @@ class Player:
         self.rate_of_fire = 240
 
     def move(self, direction):
+        global ROOMUPDATE
         if direction == 'up':
-            if self.position_y - self.speed >= 150 or (890 <= self.position_x <= 940 and CAN_MOVE_UP):
+            if self.position_y - self.speed >= 150 \
+                    or (890 <= self.position_x <= 940 and CAN_MOVE_UP and ROOMCLEAR):
                 self.position_y -= self.speed
                 if self.position_y < 100:
                     NEWROOM = True
@@ -92,9 +100,11 @@ class Player:
                                 game_map[x][y] = '@'
                                 game_map[x - 1][y] = '#'
                                 NEWROOM = False
+                                ROOMUPDATE = True
                                 break
         elif direction == 'down':
-            if self.position_y + self.speed <= WIN_HEIGHT - 250 or (890 <= self.position_x <= 940 and CAN_MOVE_DOWN):
+            if self.position_y + self.speed <= WIN_HEIGHT - 250 \
+                    or (890 <= self.position_x <= 940 and CAN_MOVE_DOWN and ROOMCLEAR):
                 self.position_y += self.speed
                 if self.position_y > 850:
                     NEWROOM = True
@@ -105,9 +115,11 @@ class Player:
                                 game_map[x][y] = '@'
                                 game_map[x + 1][y] = '#'
                                 NEWROOM = False
+                                ROOMUPDATE = True
                                 break
         elif direction == 'right':
-            if self.position_x + self.speed <= WIN_WIDTH - 250 or (410 <= self.position_y <= 460 and CAN_MOVE_RIGHT):
+            if self.position_x + self.speed <= WIN_WIDTH - 250 \
+                    or (410 <= self.position_y <= 460 and CAN_MOVE_RIGHT and ROOMCLEAR):
                 self.position_x += self.speed
                 if self.position_x > 1800:
                     NEWROOM = True
@@ -118,9 +130,11 @@ class Player:
                                 game_map[x][y] = '@'
                                 game_map[x][y + 1] = '#'
                                 NEWROOM = False
+                                ROOMUPDATE = True
                                 break
         elif direction == 'left':
-            if self.position_x - self.speed >= 150 or (410 <= self.position_y <= 460 and CAN_MOVE_LEFT):
+            if self.position_x - self.speed >= 150 \
+                    or (410 <= self.position_y <= 460 and CAN_MOVE_LEFT and ROOMCLEAR):
                 self.position_x -= self.speed
                 if self.position_x < 100:
                     NEWROOM = True
@@ -131,6 +145,7 @@ class Player:
                                 game_map[x][y] = '@'
                                 game_map[x][y - 1] = '#'
                                 NEWROOM = False
+                                ROOMUPDATE = True
                                 break
 
 
@@ -176,6 +191,7 @@ class Projectile(pygame.sprite.Sprite):
         self.rect = pygame.Rect(self.x, self.y, 2 * radius, 2 * radius)
         self.rect.x = self.x
         self.rect.y = self.y
+        self.mask = pygame.mask.from_surface(self.image)
 
         self.color = color
         self.shot_speed = shot_speed
@@ -186,7 +202,8 @@ class Projectile(pygame.sprite.Sprite):
             self.vel = shot_speed
 
     def update(self):
-        if not pygame.sprite.spritecollide(self, vertical_borders, dokill=False) and not pygame.sprite.spritecollide(self, horizontal_borders, dokill=False):
+        if not pygame.sprite.spritecollide(self, vertical_borders, dokill=False) and not pygame.sprite.spritecollide(self, horizontal_borders, dokill=False)\
+                and not pygame.sprite.spritecollide(self, mobs, dokill=False):
             self.rect.x = self.x
             self.rect.y = self.y
             if self.facing == 'up' or self.facing == 'down':
@@ -200,11 +217,39 @@ class Projectile(pygame.sprite.Sprite):
 
 
 
-class Mob():
-    def __init__(self, id, x, y):
+class Mob(pygame.sprite.Sprite):
+    image = load_image("mob1.png")
+    image = pygame.transform.scale(image, (100, 100))
+
+    def __init__(self):
+        super().__init__(all_sprites)
         self.id = id
+        self.hp = 20
         self.x = random.randint(150, WIN_WIDTH - 250)
         self.y = random.randint(150, WIN_HEIGHT - 250)
+        self.image = Mob.image
+        self.rect = self.image.get_rect()
+        self.rect.x = self.x
+        self.rect.y = self.y
+        self.speed = 3
+        self.mask = pygame.mask.from_surface(self.image)
+
+
+    def update(self):
+        x, y = player.get_position()
+        if self.rect.x != x or self.rect.y != y:
+            if self.rect.x > x:
+                self.rect.x -= self.speed
+            if self.rect.x < x:
+                self.rect.x += self.speed
+            if self.rect.y > y:
+                self.rect.y -= self.speed
+            if self.rect.y < y:
+                self.rect.y += self.speed
+        if bool(pygame.sprite.spritecollide(self, bullets, dokill=False)):
+            self.hp -= 1
+        if self.hp <= 0:
+            self.kill()
 
 
 def DrawWin(screen):
@@ -237,10 +282,20 @@ def get_map(name):
     return mp
 
 
+def add_mobs():
+    global ROOMCLEAR, ROOMUPDATE
+    mob = Mob()
+    all_sprites.add(mob)
+    mobs.add(mob)
+    ROOMCLEAR = False
+    ROOMUPDATE = False
+
+
 if __name__ == '__main__':
     clock = pygame.time.Clock()
     player = Player()
     oldtime = pygame.time.get_ticks()
+    first_time = pygame.time.get_ticks()
     NEWROOM = False
     CAN_MOVE_UP = None
     CAN_MOVE_DOWN = None
@@ -252,6 +307,7 @@ if __name__ == '__main__':
     horizontal_borders = pygame.sprite.Group()
     vertical_borders = pygame.sprite.Group()
     bullets = pygame.sprite.Group()
+    mobs = pygame.sprite.Group()
 
     image = load_image("Collectible_Fanny_Pack_appearance.png")
     image2 = pygame.transform.scale(image, (100, 100))
@@ -351,11 +407,11 @@ if __name__ == '__main__':
             for y in range(10):
                 if game_map[x][y] == '#':
                     try:
-                        if game_map[x][y - 1] == '@':
+                        if game_map[x][y - 1] != '-':
                             door4_sprite.rect.x = 0
                             door4_sprite.rect.y = WIN_HEIGHT // 2 - 100
                             CAN_MOVE_LEFT = True
-                        elif game_map[x][y - 1] != '@':
+                        elif game_map[x][y - 1] == '-':
                             door4_sprite.rect.x = 2000
                             door4_sprite.rect.y = 2000
                             CAN_MOVE_LEFT = False
@@ -365,11 +421,11 @@ if __name__ == '__main__':
                         CAN_MOVE_LEFT = False
 
                     try:
-                        if game_map[x][y + 1] == '@':
+                        if game_map[x][y + 1] != '-':
                             door2_sprite.rect.x = WIN_WIDTH - 150
                             door2_sprite.rect.y = WIN_HEIGHT // 2 - 100
                             CAN_MOVE_RIGHT = True
-                        elif game_map[x][y + 1] != '@':
+                        elif game_map[x][y + 1] == '-':
                             door2_sprite.rect.x = 2000
                             door2_sprite.rect.y = 2000
                             CAN_MOVE_RIGHT = False
@@ -379,11 +435,11 @@ if __name__ == '__main__':
                         CAN_MOVE_RIGHT = False
 
                     try:
-                        if game_map[x - 1][y] == '@':
+                        if game_map[x - 1][y] != '-':
                             door1_sprite.rect.x = WIN_WIDTH // 2 - 100
                             door1_sprite.rect.y = 0
                             CAN_MOVE_UP = True
-                        if game_map[x - 1][y] != '@':
+                        if game_map[x - 1][y] == '-':
                             door1_sprite.rect.x = 2000
                             door1_sprite.rect.y = 2000
                             CAN_MOVE_UP = False
@@ -393,11 +449,11 @@ if __name__ == '__main__':
                         CAN_MOVE_UP = False
 
                     try:
-                        if game_map[x + 1][y] == '@':
+                        if game_map[x + 1][y] != '-':
                             door3_sprite.rect.x = WIN_WIDTH // 2 - 100
                             door3_sprite.rect.y = WIN_HEIGHT - 150
                             CAN_MOVE_DOWN = True
-                        if game_map[x + 1][y] != '@':
+                        if game_map[x + 1][y] == '-':
                             door3_sprite.rect.x = 2000
                             door3_sprite.rect.y = 2000
                             CAN_MOVE_DOWN = False
@@ -417,6 +473,18 @@ if __name__ == '__main__':
                     all_sprites.add(door3_sprite)
                     all_sprites.add(door4_sprite)
 
+        if ROOMCLEAR and ROOMUPDATE:
+            for _ in range(random.randint(1, 4)):
+                add_mobs()
+        if bool(pygame.sprite.spritecollide(player_sprite, mobs, dokill=False)):
+            second_time = pygame.time.get_ticks()
+            if second_time - first_time > 1000:
+                player.hp -= 1
+                first_time = second_time
+        if player.hp <= 0:
+            running = False
+        if len(mobs.sprites()) == 0:
+            ROOMCLEAR = True
         DrawWin(screen)
         pygame.display.flip()
         clock.tick(FPS)
