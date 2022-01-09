@@ -17,6 +17,7 @@ running = True
 ROOMCLEAR = True
 NEWROOM = False
 ROOMUPDATE = False
+SPAWNMOBS = False
 
 def load_image(name, colorkey=None):
     fullname = os.path.join('data', name)
@@ -153,11 +154,6 @@ class Player():
         return (self.position_x, self.position_y)
 
 
-class Room:
-    def __init__(self):
-        pass
-
-
 class Item:
     def __init__(self):
         pass
@@ -214,7 +210,6 @@ class Projectile(pygame.sprite.Sprite):
             self.kill()
         if self.x < 150 or self.x > WIN_WIDTH - 150 or self.y < 150 or self.y > WIN_HEIGHT - 150:
             self.kill()
-
 
 
 class Mob(pygame.sprite.Sprite):
@@ -356,6 +351,7 @@ if __name__ == '__main__':
     Border(150, WIN_HEIGHT - 150, WIN_WIDTH - 150, WIN_HEIGHT - 150)
 
     game_map = get_map("maps/map1.txt")
+    room_map = get_map("maps/room_map1.txt")
 
     start_screen()
 
@@ -406,6 +402,15 @@ if __name__ == '__main__':
         for x in range(10):
             for y in range(10):
                 if game_map[x][y] == '#':
+                    try:
+                        if room_map[x][y] == '1':
+                            SPAWNMOBS = True
+                            room_map[x][y] = '0'
+                        elif room_map[x][y] == '0':
+                            SPAWNMOBS = False
+                    except:
+                        pass
+
                     try:
                         if game_map[x][y - 1] != '-':
                             door4_sprite.rect.x = 0
@@ -473,9 +478,11 @@ if __name__ == '__main__':
                     all_sprites.add(door3_sprite)
                     all_sprites.add(door4_sprite)
 
-        if ROOMCLEAR and ROOMUPDATE:
+        if ROOMCLEAR and ROOMUPDATE and SPAWNMOBS:
             for _ in range(random.randint(1, 4)):
                 add_mobs()
+                if random.randint(1, 5) == 3:
+                    pass
         if bool(pygame.sprite.spritecollide(player_sprite, mobs, dokill=False)):
             second_time = pygame.time.get_ticks()
             if second_time - first_time > 1000:
@@ -485,6 +492,7 @@ if __name__ == '__main__':
             running = False
         if len(mobs.sprites()) == 0:
             ROOMCLEAR = True
+
         DrawWin(screen)
         pygame.display.flip()
         clock.tick(FPS)
