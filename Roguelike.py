@@ -18,6 +18,9 @@ ROOMCLEAR = True
 NEWROOM = False
 ROOMUPDATE = False
 SPAWNMOBS = False
+LEVELUPDATE = False
+CURENTLEVEL = 1
+
 
 def load_image(name, colorkey=None):
     fullname = os.path.join('data', name)
@@ -85,6 +88,7 @@ class Player():
         self.position_x = WIN_WIDTH // 2
         self.position_y = WIN_HEIGHT // 2
         self.rate_of_fire = 240
+        self.damage = 20
 
     def move(self, direction):
         global ROOMUPDATE
@@ -242,7 +246,7 @@ class Mob(pygame.sprite.Sprite):
             if self.rect.y < y:
                 self.rect.y += self.speed
         if bool(pygame.sprite.spritecollide(self, bullets, dokill=False)):
-            self.hp -= 1
+            self.hp -= player.damage
         if self.hp <= 0:
             self.kill()
 
@@ -352,8 +356,14 @@ if __name__ == '__main__':
 
     game_map = get_map("maps/map1.txt")
     room_map = get_map("maps/room_map1.txt")
+    map2 = get_map("maps/map2.txt")
+    room_map2 = get_map("maps/room_map2.txt")
+    map3 = get_map("maps/map3.txt")
+    room_map3 = get_map("maps/room_map3.txt")
 
     start_screen()
+
+    score = pygame.time.get_ticks()
 
     while running:
         for event in pygame.event.get():
@@ -408,6 +418,10 @@ if __name__ == '__main__':
                             room_map[x][y] = '0'
                         elif room_map[x][y] == '0':
                             SPAWNMOBS = False
+                        elif room_map[x][y] == '2':
+                            LEVELUPDATE = True
+                            CURENTLEVEL += 1
+                            SPAWNMOBS = True
                     except:
                         pass
 
@@ -467,7 +481,6 @@ if __name__ == '__main__':
                         door3_sprite.rect.y = 2000
                         CAN_MOVE_DOWN = False
 
-
                     all_sprites.remove(door1_sprite)
                     all_sprites.remove(door2_sprite)
                     all_sprites.remove(door3_sprite)
@@ -490,8 +503,25 @@ if __name__ == '__main__':
                 first_time = second_time
         if player.hp <= 0:
             running = False
-        if len(mobs.sprites()) == 0:
+        if len(mobs.sprites()) == 0 and not ROOMCLEAR:
             ROOMCLEAR = True
+            health_up = random.randint(0, 5)
+            if player.hp + health_up >= 20:
+                player.hp = 20
+            else:
+                player.hp += health_up
+
+        if LEVELUPDATE:
+            player.hp = 20
+            LEVELUPDATE = False
+            if CURENTLEVEL == 2:
+                game_map = map2
+                room_map = room_map2
+            elif CURENTLEVEL == 3:
+                game_map = map3
+                room_map = room_map3
+            elif CURENTLEVEL == 4:
+                running = False
 
         DrawWin(screen)
         pygame.display.flip()
