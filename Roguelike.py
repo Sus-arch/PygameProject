@@ -1,5 +1,6 @@
 import pygame
 import os, sys, random
+import sqlite3
 
 
 WIN_WIDTH = 1920
@@ -54,7 +55,7 @@ def start_screen():
                   "Удачи :)"]
 
     fon = pygame.transform.scale(load_image('background.jpg'), (WIN_WIDTH, WIN_HEIGHT))
-    screen.blit(fon, (0, 0))
+    screen.blit(fon, (100, 100))
     font = pygame.font.Font(None, 30)
     text_coord = 50
     for line in intro_text:
@@ -81,6 +82,45 @@ def game_over_screen():
     pass
 
 
+def item_screen(name, description, damage, hp, speed, tears, path_to_file):
+    text = [name,
+            description,
+            "Чтобы подобрать предмет нажмите <e>",
+            "Чтобы отказаться от предмета нажмите <q>"]
+    fon = pygame.transform.scale(load_image(path_to_file), (500, 500))
+    screen.fill((0, 0, 0))
+    screen.blit(fon, (1000, 500))
+    font = pygame.font.Font(None, 30)
+    text_coord = 50
+    for line in text:
+        string_rendered = font.render(line, 1, pygame.Color('white'))
+        intro_rect = string_rendered.get_rect()
+        text_coord += 10
+        intro_rect.top = text_coord
+        intro_rect.x = 10
+        text_coord += intro_rect.height
+        screen.blit(string_rendered, intro_rect)
+
+    while True:
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                terminate()
+            elif event.type == pygame.KEYDOWN and event.key == pygame.K_e:
+                if player.hp + hp >= 1:
+                    player.hp += hp
+                if player.damage + damage >= 0.5:
+                    player.damage += damage
+                if player.speed + speed >= 1:
+                    player.speed += speed
+                if player.rate_of_fire + tears >= 50:
+                    player.rate_of_fire += tears
+                return
+            elif event.type == pygame.KEYDOWN and event.key == pygame.K_q:
+                return
+        pygame.display.flip()
+        clock.tick(FPS)
+
+
 class Player():
     def __init__(self):
         self.hp = 20
@@ -88,7 +128,7 @@ class Player():
         self.position_x = WIN_WIDTH // 2
         self.position_y = WIN_HEIGHT // 2
         self.rate_of_fire = 240
-        self.damage = 20
+        self.damage = 1
 
     def move(self, direction):
         global ROOMUPDATE
@@ -505,6 +545,16 @@ if __name__ == '__main__':
             running = False
         if len(mobs.sprites()) == 0 and not ROOMCLEAR:
             ROOMCLEAR = True
+            new_item = random.randint(1, 7)
+            if new_item == 5:
+                item_id = random.randint(1, 10)
+                con = sqlite3.connect("items.db")
+                cur = con.cursor()
+                result = cur.execute("""SELECT * FROM items WHERE id = ?""", (str(item_id),)).fetchall()
+                con.close()
+                id, name, description, damage, hp, speed, tears, path_to_file = result[0]
+                item_screen(name, description, damage, hp, speed, tears, path_to_file)
+
             health_up = random.randint(0, 5)
             if player.hp + health_up >= 20:
                 player.hp = 20
