@@ -371,7 +371,7 @@ class Mob(pygame.sprite.Sprite):
 
     def __init__(self, hp):
         super().__init__(all_sprites)
-        path = random.choice(["mob1.png", "mob2.png", "mob3.png", "mob4.png", "mob5.png", "mob6.png", "mob7.png"])
+        path = random.choice(["mob1.png", "mob2.png", "mob3.png", "mob4.png", "mob5.png", "mob6.png", "mob7.png", "mob8.png", "mob9.png", "mob10.png"])
         image = load_image(path)
         image = pygame.transform.scale(image, (100, 100))
         self.id = id
@@ -424,6 +424,20 @@ def DrawWin(screen):
     player_sprite.rect.x, player_sprite.rect.y = player_position
     all_sprites.draw(screen)
     all_sprites.update()
+    text = [f"HP: {player.hp}",
+            f"DAMAGE: {player.damage}",
+            f"SPEED: {player.speed}",
+            f"RATE OF FIRE: {player.rate_of_fire}"]
+    font = pygame.font.Font(None, 40)
+    text_coord = 0
+    for line in text:
+        string_rendered = font.render(line, 1, pygame.Color('red'))
+        intro_rect = string_rendered.get_rect()
+        text_coord += 10
+        intro_rect.top = text_coord
+        intro_rect.x = 10
+        text_coord += intro_rect.height
+        screen.blit(string_rendered, intro_rect)
 
 
 def get_map(name):
@@ -668,7 +682,7 @@ if __name__ == '__main__':
             ROOMCLEAR = True
             new_item = random.randint(1, 7)
             if new_item == 5:
-                item_id = random.randint(1, 10)
+                item_id = random.randint(1, 16)
                 con = sqlite3.connect("items.db")
                 cur = con.cursor()
                 result = cur.execute("""SELECT * FROM items WHERE id = ?""", (str(item_id),)).fetchall()
