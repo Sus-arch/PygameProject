@@ -1,3 +1,5 @@
+import csv
+
 import pygame
 import os, sys, random
 import sqlite3
@@ -21,6 +23,8 @@ ROOMUPDATE = False
 SPAWNMOBS = False
 LEVELUPDATE = False
 CURENTLEVEL = 1
+POINTS = 0
+game_over = False
 
 
 def load_image(name, colorkey=None):
@@ -79,7 +83,113 @@ def start_screen():
 
 
 def game_over_screen():
-    pass
+    if game_over:
+        sprite = pygame.sprite.Sprite()
+        im = load_image('gameover.png')
+        sprite.image = pygame.transform.scale(im, (WIN_WIDTH, WIN_HEIGHT))
+        sprites = pygame.sprite.Group()
+        sprite.rect = sprite.image.get_rect()
+        sprites.add(sprite)
+        sprite.rect.x = -WIN_WIDTH
+        while True:
+            for event in pygame.event.get():
+                if event.type == pygame.QUIT:
+                    terminate()
+                elif event.type == pygame.KEYDOWN or \
+                        event.type == pygame.MOUSEBUTTONDOWN:
+                    return
+            screen.fill((0, 0, 0))
+            sprites.draw(screen)
+            if sprite.rect.x != 0:
+                sprite.rect.x += 480 // 30
+            pygame.display.flip()
+            clock.tick(FPS)
+    elif CURENTLEVEL == 4:
+        screen.fill((0, 0, 0))
+        end_score = POINTS * 1000 - score
+        name = ''
+        while True:
+            for event in pygame.event.get():
+                if event.type == pygame.QUIT:
+                    terminate()
+                elif event.type == pygame.KEYDOWN:
+                    if event.key == pygame.K_q:
+                        name += 'q'
+                    elif event.key == pygame.K_w:
+                        name += 'w'
+                    elif event.key == pygame.K_e:
+                        name += 'e'
+                    elif event.key == pygame.K_r:
+                        name += 'r'
+                    elif event.key == pygame.K_t:
+                        name += 't'
+                    elif event.key == pygame.K_y:
+                        name += 'y'
+                    elif event.key == pygame.K_u:
+                        name += 'u'
+                    elif event.key == pygame.K_i:
+                        name += 'i'
+                    elif event.key == pygame.K_o:
+                        name += 'o'
+                    elif event.key == pygame.K_p:
+                        name += 'p'
+                    elif event.key == pygame.K_a:
+                        name += 'a'
+                    elif event.key == pygame.K_s:
+                        name += 's'
+                    elif event.key == pygame.K_d:
+                        name += 'd'
+                    elif event.key == pygame.K_f:
+                        name += 'f'
+                    elif event.key == pygame.K_g:
+                        name += 'g'
+                    elif event.key == pygame.K_h:
+                        name += 'h'
+                    elif event.key == pygame.K_j:
+                        name += 'j'
+                    elif event.key == pygame.K_k:
+                        name += 'k'
+                    elif event.key == pygame.K_l:
+                        name += 'l'
+                    elif event.key == pygame.K_z:
+                        name += 'z'
+                    elif event.key == pygame.K_x:
+                        name += 'x'
+                    elif event.key == pygame.K_c:
+                        name += 'c'
+                    elif event.key == pygame.K_v:
+                        name += 'v'
+                    elif event.key == pygame.K_b:
+                        name += 'b'
+                    elif event.key == pygame.K_n:
+                        name += 'n'
+                    elif event.key == pygame.K_m:
+                        name += 'm'
+                    elif event.key == pygame.K_BACKSPACE:
+                        name = name[:-1]
+                    elif event.key == pygame.K_RETURN and bool(name):
+                        save_result(name, end_score)
+                        return
+
+            screen.fill((0, 0, 0))
+            text = ["Поздравляю вы прошли игру",
+                    f"Ваш счёт {end_score}",
+                    f"Для сохранения результата введите своё имя: {name}" ]
+            font = pygame.font.Font(None, 50)
+            text_coord = 50
+            for line in text:
+                string_rendered = font.render(line, 1, pygame.Color('white'))
+                intro_rect = string_rendered.get_rect()
+                text_coord += 10
+                intro_rect.top = text_coord
+                intro_rect.x = 10
+                text_coord += intro_rect.height
+                screen.blit(string_rendered, intro_rect)
+            pygame.display.flip()
+            clock.tick(FPS)
+
+    else:
+        pass
 
 
 def item_screen(name, description, damage, hp, speed, tears, path_to_file):
@@ -112,13 +222,20 @@ def item_screen(name, description, damage, hp, speed, tears, path_to_file):
                     player.damage += damage
                 if player.speed + speed >= 1:
                     player.speed += speed
-                if player.rate_of_fire + tears >= 50:
-                    player.rate_of_fire += tears
+                if player.rate_of_fire - tears >= 5:
+                    player.rate_of_fire -= tears
                 return
             elif event.type == pygame.KEYDOWN and event.key == pygame.K_q:
                 return
         pygame.display.flip()
         clock.tick(FPS)
+
+
+def save_result(name, score):
+    with open('players.csv', mode='a', newline='', encoding='utf8') as file:
+        writer = csv.writer(file, delimiter=';', quotechar='"')
+        writer.writerow([name, score])
+
 
 
 class Player():
@@ -151,7 +268,7 @@ class Player():
             if self.position_y + self.speed <= WIN_HEIGHT - 250 \
                     or (890 <= self.position_x <= 940 and CAN_MOVE_DOWN and ROOMCLEAR):
                 self.position_y += self.speed
-                if self.position_y > 850:
+                if self.position_y > 820:
                     NEWROOM = True
                     self.position_y = 250
                     for x in range(10):
@@ -166,7 +283,7 @@ class Player():
             if self.position_x + self.speed <= WIN_WIDTH - 250 \
                     or (410 <= self.position_y <= 460 and CAN_MOVE_RIGHT and ROOMCLEAR):
                 self.position_x += self.speed
-                if self.position_x > 1800:
+                if self.position_x > 1750:
                     NEWROOM = True
                     self.position_x = 250
                     for x in range(10):
@@ -193,14 +310,8 @@ class Player():
                                 ROOMUPDATE = True
                                 break
 
-
     def get_position(self):
         return (self.position_x, self.position_y)
-
-
-class Item:
-    def __init__(self):
-        pass
 
 
 class Border(pygame.sprite.Sprite):
@@ -257,16 +368,17 @@ class Projectile(pygame.sprite.Sprite):
 
 
 class Mob(pygame.sprite.Sprite):
-    image = load_image("mob1.png")
-    image = pygame.transform.scale(image, (100, 100))
 
-    def __init__(self):
+    def __init__(self, hp):
         super().__init__(all_sprites)
+        path = random.choice(["mob1.png", "mob2.png", "mob3.png", "mob4.png", "mob5.png", "mob6.png", "mob7.png"])
+        image = load_image(path)
+        image = pygame.transform.scale(image, (100, 100))
         self.id = id
-        self.hp = 20
+        self.hp = hp
         self.x = random.randint(150, WIN_WIDTH - 250)
         self.y = random.randint(150, WIN_HEIGHT - 250)
-        self.image = Mob.image
+        self.image = image
         self.rect = self.image.get_rect()
         self.rect.x = self.x
         self.rect.y = self.y
@@ -275,6 +387,7 @@ class Mob(pygame.sprite.Sprite):
 
 
     def update(self):
+        global POINTS
         x, y = player.get_position()
         if self.rect.x != x or self.rect.y != y:
             if self.rect.x > x:
@@ -289,6 +402,7 @@ class Mob(pygame.sprite.Sprite):
             self.hp -= player.damage
         if self.hp <= 0:
             self.kill()
+            POINTS += 1
 
 
 def DrawWin(screen):
@@ -323,9 +437,15 @@ def get_map(name):
 
 def add_mobs():
     global ROOMCLEAR, ROOMUPDATE
-    mob = Mob()
-    all_sprites.add(mob)
-    mobs.add(mob)
+    if CURENTLEVEL == 1:
+        mob = Mob(20)
+    elif CURENTLEVEL == 2:
+        mob = Mob(30)
+    elif CURENTLEVEL == 3:
+        mob = Mob(40)
+    if CURENTLEVEL != 4:
+        all_sprites.add(mob)
+        mobs.add(mob)
     ROOMCLEAR = False
     ROOMUPDATE = False
 
@@ -543,6 +663,7 @@ if __name__ == '__main__':
                 first_time = second_time
         if player.hp <= 0:
             running = False
+            game_over = True
         if len(mobs.sprites()) == 0 and not ROOMCLEAR:
             ROOMCLEAR = True
             new_item = random.randint(1, 7)
@@ -576,4 +697,5 @@ if __name__ == '__main__':
         DrawWin(screen)
         pygame.display.flip()
         clock.tick(FPS)
+    game_over_screen()
     pygame.quit()
